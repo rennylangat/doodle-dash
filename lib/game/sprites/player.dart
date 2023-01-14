@@ -57,9 +57,8 @@ class Player extends SpriteGroupComponent<PlayerState>
   @override
   void update(double dt) {
     // Add a Player to the game: Add game state check
-    if (gameRef.gameManager.isIntro || gameRef.gameManager.isGameOver) {
-      _velocity.x = _hAxisInput * jumpSpeed;
-    }
+    if (gameRef.gameManager.isIntro || gameRef.gameManager.isGameOver) return;
+    _velocity.x = _hAxisInput * jumpSpeed;
 
     // Add a Player to the game: Add calcualtion for Dash's horizontal velocity
 
@@ -71,7 +70,7 @@ class Player extends SpriteGroupComponent<PlayerState>
       position.x = gameRef.size.x - (dashHorizontalCenter);
     }
 
-    if (position.x > dashHorizontalCenter) {
+    if (position.x > gameRef.size.x - (dashHorizontalCenter)) {
       position.x = dashHorizontalCenter;
     }
 
@@ -90,6 +89,16 @@ class Player extends SpriteGroupComponent<PlayerState>
 
     // Add a Player to the game: Add keypress logic
 
+    if (keysPressed.contains(LogicalKeyboardKey.arrowLeft)) {
+      moveLeft();
+    }
+    if (keysPressed.contains(LogicalKeyboardKey.arrowRight)) {
+      moveRight();
+    }
+    if (keysPressed.contains(LogicalKeyboardKey.space)) {
+      // jump();
+    }
+
     return true;
   }
 
@@ -97,12 +106,17 @@ class Player extends SpriteGroupComponent<PlayerState>
     _hAxisInput = 0;
 
     // Add a Player to the game: Add logic for moving left
+    current = PlayerState.left;
+
+    _hAxisInput += movingLeftInput;
   }
 
   void moveRight() {
     _hAxisInput = 0;
 
     // Add a Player to the game: Add logic for moving right
+    current = PlayerState.right;
+    _hAxisInput += movingRightInput;
   }
 
   void resetDirection() {
