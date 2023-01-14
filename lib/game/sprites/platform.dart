@@ -17,8 +17,12 @@ import '../doodle_dash.dart';
 /// [T] should be an enum that is used to Switch between spirtes, if necessary
 /// Many platforms only need one Sprite, so [T] will be an enum that looks
 /// something like: `enum { only }`
-///
+
+enum BrokenPlatformState { cracked, broken }
+
 enum NormalPlatformState { only }
+
+enum SpringState { down, up }
 
 class NormalPlatform extends Platform<NormalPlatformState> {
   NormalPlatform({super.position});
@@ -41,6 +45,68 @@ class NormalPlatform extends Platform<NormalPlatformState> {
 
     size = spriteOptions[randSprite]!;
     await super.onLoad();
+  }
+}
+
+class BrokenPlatform extends Platform<BrokenPlatformState> {
+  BrokenPlatform({super.position});
+
+  @override
+  Future<void>? onLoad() async {
+    await super.onLoad();
+
+    sprites = <BrokenPlatformState, Sprite>{
+      BrokenPlatformState.cracked:
+          await gameRef.loadSprite('game/platform_cracked_monitor.png'),
+      BrokenPlatformState.broken:
+          await gameRef.loadSprite('game/platform_monitor_broken.png'),
+    };
+    current = BrokenPlatformState.cracked;
+    size = Vector2(115, 84);
+  }
+
+  void breakPlatform() {
+    current = BrokenPlatformState.broken;
+  }
+}
+
+class SpringBoard extends Platform<SpringState> {
+  SpringBoard({super.position});
+
+  @override
+  Future<void>? onLoad() async {
+    await super.onLoad();
+
+    sprites = <SpringState, Sprite>{
+      SpringState.down:
+          await gameRef.loadSprite('game/platform_trampoline_down.png'),
+      SpringState.up:
+          await gameRef.loadSprite('game/platform_trampoline_up.png'),
+    };
+
+    current = SpringState.up;
+
+    size = Vector2(100, 45);
+  }
+
+  @override
+  void onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollisionStart(intersectionPoints, other);
+
+    bool isCollidingVertically =
+        (intersectionPoints.first.y - intersectionPoints.last.y).abs() < 5;
+
+    if (isCollidingVertically) {
+      current = SpringState.down;
+    }
+  }
+
+  @override
+  void onCollisionEnd(PositionComponent other) {
+    super.onCollisionEnd(other);
+
+    current = SpringState.up;
   }
 }
 
@@ -67,11 +133,35 @@ abstract class Platform<T> extends SpriteGroupComponent<T>
     await add(hitbox);
 
     // More on Platforms: Set isMoving
+    final int rand = Random().nextInt(100);
+    if (rand > 80) isMoving = true;
   }
 
   // More on Platforms: Add _move method
 
+  void _move(double dt) {
+    if (!isMoving) return;
+
+    final double gameWidth = gameRef.size.x;
+
+    if (position.x <= 0) {
+      direction = 1;
+    } else if (position.x >= gameWidth - size.x) {
+      direction = -1;
+    }
+
+    _velocity.x = direction * speed;
+
+    position += _velocity * dt;
+  }
+
   // More on Platforms: Override update method
+
+  @override
+  void update(double dt) {
+    _move(dt);
+    super.update(dt);
+  }
 }
 
 // Add platforms: Add NormalPlatformState Enum
