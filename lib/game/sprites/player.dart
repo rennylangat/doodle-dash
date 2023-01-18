@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../doodle_dash.dart';
 import 'platform.dart';
+import 'powerup.dart';
 // Core gameplay: Import sprites.dart
 
 enum PlayerState {
@@ -111,8 +112,11 @@ class Player extends SpriteGroupComponent<PlayerState>
     _hAxisInput = 0;
 
     // Add a Player to the game: Add logic for moving left
-    current = PlayerState.left;
-
+    if (isWearingHat) {
+      current = PlayerState.nooglerLeft;
+    } else if (!hasPowerUp) {
+      current = PlayerState.left;
+    }
     _hAxisInput += movingLeftInput;
   }
 
@@ -120,7 +124,11 @@ class Player extends SpriteGroupComponent<PlayerState>
     _hAxisInput = 0;
 
     // Add a Player to the game: Add logic for moving right
-    current = PlayerState.right;
+    if (isWearingHat) {
+      current = PlayerState.nooglerRight;
+    } else if (!hasPowerUp) {
+      current = PlayerState.right;
+    }
     _hAxisInput += movingRightInput;
   }
 
@@ -129,16 +137,31 @@ class Player extends SpriteGroupComponent<PlayerState>
   }
 
   // Powerups: Add hasPowerup getter
+  bool get hasPowerUp =>
+      current == PlayerState.rocket ||
+      current == PlayerState.nooglerLeft ||
+      current == PlayerState.nooglerRight ||
+      current == PlayerState.nooglerCenter;
 
   // Powerups: Add isInvincible getter
 
+  bool get isInvincible => current == PlayerState.rocket;
+
   // Powerups: Add isWearingHat getter
+  bool get isWearingHat =>
+      current == PlayerState.nooglerLeft ||
+      current == PlayerState.nooglerRight ||
+      current == PlayerState.center;
 
   // Core gameplay: Override onCollision callback
 
   @override
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollision(intersectionPoints, other);
+    if (other is EnemyPlatform && !isInvincible) {
+      gameRef.onLose();
+      return;
+    }
 
     bool isCollidingVertically =
         (intersectionPoints.first.y - intersectionPoints.last.y).abs() < 5;
@@ -157,6 +180,21 @@ class Player extends SpriteGroupComponent<PlayerState>
         other.breakPlatform();
         return;
       }
+    }
+
+    if (!hasPowerUp && other is Rocket) {
+      current = PlayerState.rocket;
+      other.removeFromParent();
+      jump(specialJumpSpeed: jumpSpeed * other.jumpSpeedMultiplier);
+      return;
+    } else if (!hasPowerUp && other is NooglerHat) {
+      if (current == PlayerState.center) current = PlayerState.nooglerCenter;
+      if (current == PlayerState.left) current = PlayerState.nooglerLeft;
+      if (current == PlayerState.right) current = PlayerState.nooglerRight;
+      other.removeFromParent();
+      _removePowerupAfterTime(other.activeLengthinMS);
+      jump(specialJumpSpeed: jumpSpeed * other.jumpSpeedMultiplier);
+      return;
     }
   }
 
